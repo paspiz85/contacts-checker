@@ -1,6 +1,7 @@
 contacts-checker
 ================
 Execute some checks and some fixes on your Google Contact's book.
+Run with:
 ```
 mvn compile exec:java -Dexec.mainClass="contacts.Test" \
 -Dgoogle.username="email" \
