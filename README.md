@@ -6,6 +6,7 @@ Run with:
 mvn compile exec:java -Dexec.mainClass="contacts.Test" \
 -Dgoogle.username="email" \
 -Dgoogle.password="password" \
+-Dvcards.process="true" \
 -Dvcards.input="contacts.vcf" \
 -Dvcards.output="vcf" \
 -Dfacebook.calendar="file.ics" \

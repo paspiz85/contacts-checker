@@ -221,7 +221,7 @@ public class Test implements Runnable {
 
 	private boolean checkEvents(FacebookBirthdayCalendar facebookCalendar, ContactEntry contact, String name) {
 		boolean changed = false;
-		if (contact.hasBirthday()) {
+		if (contact.hasBirthday() && facebookCalendar != null) {
 			Object facebookContact = facebookCalendar.getByName(name);
 			if (facebookContact != null) {
 				checkEventFacebookBirthday(contact, facebookCalendar, name, facebookContact);
@@ -393,30 +393,35 @@ public class Test implements Runnable {
 
 	private boolean checkWebsites(Map<String, String> facebookUrls, ContactEntry contact, String name) {
 		boolean changed = false;
-		boolean facebookFound = false;
-		for (Website website : contact.getWebsites()) {
-			if (facebookUrls.remove(website.getHref()) != null) {
-				facebookFound = true;
-			}
-		}
-		if (!facebookFound && name != null) {
-			String facebookUrl = null;
-			for (Entry<String, String> e : facebookUrls.entrySet()) {
-				if (name.equalsIgnoreCase(e.getValue())) {
-					facebookUrl = e.getKey();
+		if (facebookUrls != null) {
+			boolean facebookFound = false;
+			for (Website website : contact.getWebsites()) {
+				if (facebookUrls.remove(website.getHref()) != null) {
+					facebookFound = true;
 				}
 			}
-			if (facebookUrl != null) {
-				contact.addWebsite(new Website(facebookUrl, null, Boolean.FALSE, Website.Rel.PROFILE));
-				facebookUrls.remove(facebookUrl);
-				reportChange(contact, "added facebook site : " + name + " : " + facebookUrl);
-				changed = true;
+			if (!facebookFound && name != null) {
+				String facebookUrl = null;
+				for (Entry<String, String> e : facebookUrls.entrySet()) {
+					if (name.equalsIgnoreCase(e.getValue())) {
+						facebookUrl = e.getKey();
+					}
+				}
+				if (facebookUrl != null) {
+					contact.addWebsite(new Website(facebookUrl, null, Boolean.FALSE, Website.Rel.PROFILE));
+					facebookUrls.remove(facebookUrl);
+					reportChange(contact, "added facebook site : " + name + " : " + facebookUrl);
+					changed = true;
+				}
 			}
 		}
 		return changed;
 	}
 
 	void executeVCards(Map<String, byte[]> photoMap) throws FileNotFoundException, IOException, ParserException, ValidationException {
+		if (!Boolean.parseBoolean(System.getProperty("vcards.process"))) {
+			return;
+		}
 		String filename = System.getProperty("vcards.input");
 		StringWriter buffer = new StringWriter();
 		PrintWriter writer = new PrintWriter(buffer);
@@ -508,10 +513,30 @@ public class Test implements Runnable {
 		long t = System.currentTimeMillis();
 		try {
 			Map<String, byte[]> photoMap = new HashMap<String, byte[]>();
-			Map<String, String> facebookUrls = new Facebook().readByUrl(new BufferedReader(new FileReader("fbids.txt")));
-			FacebookBirthdayCalendar facebookCalendar = new FacebookBirthdayCalendar();
+			Map<String, String> facebookUrls = null;
+			try {
+				facebookUrls = new Facebook().readByUrl(new BufferedReader(new FileReader("fbids.txt")));
+			} catch (Exception ex) {
+				System.err.println("Facebook URLS disabled: " + ex.getClass().getName() + ": " + ex.getMessage());
+			}
+			FacebookBirthdayCalendar facebookCalendar = null;
+			try {
+				facebookCalendar = new FacebookBirthdayCalendar();
+			} catch (Exception ex) {
+				System.err.println("Facebook Birthday Calendar disabled: " + ex.getClass().getName() + ": " + ex.getMessage());
+			}
+			String googleUsername = System.getProperty("google.username");
+			if (googleUsername == null) {
+				System.out.print("Google username > ");
+				googleUsername = System.console().readLine();
+			}
+			String googlePassword = System.getProperty("google.password");
+			if (googlePassword == null) {
+				System.out.print("Google password > ");
+				googlePassword = new String(System.console().readPassword());
+			}
 			ContactsService service = new ContactsService("Google-contactsExampleApp-3");
-			service.setUserCredentials(System.getProperty("google.username"), System.getProperty("google.password"));
+			service.setUserCredentials(googleUsername, googlePassword);
 			Query query = new Query(new URL(URL_GOOGLE_CONTACT_GROUPS_QUERY));
 			query.setMaxResults(1000);
 			List<ContactGroupEntry> contactGroups = service.query(query, ContactGroupFeed.class).getEntries();
@@ -595,11 +620,15 @@ public class Test implements Runnable {
 				}
 			}
 			executeVCards(photoMap);
-			for (Entry<String, String> e : facebookUrls.entrySet()) {
-				report(null, new FacebookFriendNotFound(e.getValue(), e.getKey()));
+			if (facebookUrls != null) {
+				for (Entry<String, String> e : facebookUrls.entrySet()) {
+					report(null, new FacebookFriendNotFound(e.getValue(), e.getKey()));
+				}
 			}
-			for (Object obj : facebookCalendar) {
-				report(null, new FacebookFriendBirthdayNotFound(facebookCalendar.getName(obj), URL_FACEBOOK + facebookCalendar.getId(obj)));
+			if (facebookCalendar != null) {
+				for (Object obj : facebookCalendar) {
+					report(null, new FacebookFriendBirthdayNotFound(facebookCalendar.getName(obj), URL_FACEBOOK + facebookCalendar.getId(obj)));
+				}
 			}
 		} catch (Exception e) {
 			logger.error(e.getMessage(), e);
