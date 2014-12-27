@@ -79,6 +79,7 @@ import contacts.warning.NoPrimaryPhoneNumber;
 import contacts.warning.NullName;
 import contacts.warning.OrganizationMismatch;
 import contacts.warning.Uncontactable;
+import contacts.warning.UnknowNote;
 import contacts.warning.UnknowPhoneNumber;
 import contacts.warning.UnknowPhoneNumberLandlinePrefix;
 import contacts.warning.Warning;
@@ -133,7 +134,9 @@ public class Test implements Runnable {
 	private static final HashSet<String> PHONE_MOBILE_RELS = new HashSet<String>(Arrays.asList(new String[] { GENERIC_MAIN_REL,
 			"http://schemas.google.com/g/2005#mobile", GENERIC_WORK_REL, "http://schemas.google.com/g/2005#pager" }));
 
-	private static final String[] PHONE_PREFIXES = { "06", "0828", "089", "081", "02", "0773", "051", "059" };
+	private static final String[] PHONE_PREFIXES = { "06", "0828", "089", "081", "02", "0773", "0577", "051", "059" };
+
+	private static final String[] NOTE_PREFIXES = { "Anno nascita", "CF", "Citofono", "Gruppo sanguigno", "Lavoro", "Orario", "Studia", "Targa auto" };
 
 	static final String URL_FACEBOOK = "https://www.facebook.com/";
 
@@ -155,6 +158,27 @@ public class Test implements Runnable {
 	private Map<String, String> organizationEmails = new HashMap<String, String>();
 
 	private Map<String, String> organizations = new HashMap<String, String>();
+
+	private boolean checkContent(ContactEntry contact, String name) throws IOException {
+		boolean changed = false;
+		if (contact.getContent() != null) {
+			BufferedReader reader = new BufferedReader(new StringReader(contact.getTextContent().getContent().getPlainText()));
+			String line = null;
+			while ((line = reader.readLine()) != null) {
+				String prefix = null;
+				for (String pre : NOTE_PREFIXES) {
+					if (line.startsWith(pre+":")) {
+						prefix = pre;
+						break;
+					}
+				}
+				if (prefix == null) {
+					report(contact, new UnknowNote(name, line));
+				}
+			}
+		}
+		return changed;
+	}
 
 	private boolean checkEmails(ContactEntry contact, String name, boolean isMyContact) {
 		boolean changed = false;
@@ -583,7 +607,7 @@ public class Test implements Runnable {
 						report(contact, new NullName());
 						printXml(contact);
 					}
-				} else if (name.equals("Pasquale Pizzuti")) {
+				} else if (name.equals("Pasquale Pizzutii")) {
 					printXml(contact);
 				}
 				if (isMyContact) {
@@ -615,6 +639,7 @@ public class Test implements Runnable {
 				for (String contactOrganization : contactOrganizations) {
 					changed |= checkOrganization(contact, name, contactOrganization);
 				}
+				changed |= checkContent(contact, name);
 				if (changed) {
 					service.update(new URL(contact.getEditLink().getHref()), contact);
 				}
