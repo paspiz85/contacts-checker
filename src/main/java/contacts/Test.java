@@ -72,6 +72,7 @@ import contacts.warning.InvalidPhoneNumber;
 import contacts.warning.InvalidPhoneNumberRel;
 import contacts.warning.ItalyPrefixPhoneNumber;
 import contacts.warning.NoEmailAddressRel;
+import contacts.warning.NoGroup;
 import contacts.warning.NoOrganizationEmailAddress;
 import contacts.warning.NoPhoto;
 import contacts.warning.NoPrimaryEmailAddress;
@@ -591,7 +592,8 @@ public class Test implements Runnable {
 				boolean changed = false;
 				boolean isMyContact = false;
 				Set<String> contactOrganizations = new HashSet<String>();
-				for (GroupMembershipInfo groupMembershipInfo : contact.getGroupMembershipInfos()) {
+				List<GroupMembershipInfo> groupMembershipInfos = contact.getGroupMembershipInfos();
+				for (GroupMembershipInfo groupMembershipInfo : groupMembershipInfos) {
 					if (groupMembershipInfo.getHref().equals(myContactsGroupId)) {
 						isMyContact = true;
 					}
@@ -611,6 +613,9 @@ public class Test implements Runnable {
 					printXml(contact);
 				}
 				if (isMyContact) {
+					if (groupMembershipInfos.size() <= 1) {
+						report(contact, new NoGroup(name));
+					}
 					Link photo = null;
 					for (Link l : contact.getLinks()) {
 						if (ContactLink.Rel.CONTACT_PHOTO.equals(l.getRel()) && l.getEtag() != null) {
