@@ -13,6 +13,7 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringReader;
 import java.io.StringWriter;
+import java.lang.reflect.Field;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
@@ -137,8 +138,6 @@ public class Test implements Runnable {
 
 	private static final String[] PHONE_PREFIXES = { "06", "0828", "089", "081", "02", "0773", "0577", "051", "059" };
 
-	private static final String[] NOTE_PREFIXES = { "Anno nascita", "CF", "Citofono", "Gruppo sanguigno", "Lavoro", "Orario", "Studia", "Targa auto" };
-
 	static final String URL_FACEBOOK = "https://www.facebook.com/";
 
 	private static final String URL_GOOGLE_CONTACT_GROUPS_QUERY = "https://www.google.com/m8/feeds/groups/default/full";
@@ -167,7 +166,16 @@ public class Test implements Runnable {
 			String line = null;
 			while ((line = reader.readLine()) != null) {
 				String prefix = null;
-				for (String pre : NOTE_PREFIXES) {
+				//for (String pre : NOTE_PREFIXES) {
+				for (Field field: NoteField.class.getDeclaredFields()) {
+					String pre = null;
+					try {
+						pre = (String) field.get(null);
+					} catch (RuntimeException e) {
+						throw e;
+					} catch (Exception e) {
+						throw new RuntimeException(e);
+					}
 					if (line.startsWith(pre+":")) {
 						prefix = pre;
 						break;
