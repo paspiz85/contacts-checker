@@ -56,6 +56,7 @@ import com.google.gdata.data.contacts.ContactGroupFeed;
 import com.google.gdata.data.contacts.ContactLink;
 import com.google.gdata.data.contacts.Event;
 import com.google.gdata.data.contacts.GroupMembershipInfo;
+import com.google.gdata.data.contacts.Relation;
 import com.google.gdata.data.contacts.Website;
 import com.google.gdata.data.extensions.Email;
 import com.google.gdata.data.extensions.Organization;
@@ -78,8 +79,10 @@ import contacts.warning.NoOrganizationEmailAddress;
 import contacts.warning.NoPhoto;
 import contacts.warning.NoPrimaryEmailAddress;
 import contacts.warning.NoPrimaryPhoneNumber;
+import contacts.warning.NoRelation;
 import contacts.warning.NullName;
 import contacts.warning.OrganizationMismatch;
+import contacts.warning.OtherGroup;
 import contacts.warning.Uncontactable;
 import contacts.warning.UnknowNote;
 import contacts.warning.UnknowPhoneNumber;
@@ -88,11 +91,16 @@ import contacts.warning.Warning;
 
 public class Test implements Runnable {
 
-	private static final SimpleDateFormat BIRTHDAY_DATE_FORMAT = new SimpleDateFormat("MM-dd");
+	private static final SimpleDateFormat BIRTHDAY_DATE_FORMAT = new SimpleDateFormat(
+			"MM-dd");
 
-	private static final HashSet<String> EMAIL_HOME_PROVIDERS = new HashSet<String>(Arrays.asList(new String[] { "@fastwebnet.it", "@virgilio.it", "@tim.it",
-			"@msn.com", "@live.com", "@ovi.com", "@yahoo.com", "@live.it", "@inwind.it", "@outlook.com", "@tin.it", "@aliceposta.it", "@alice.it", "@yahoo.it",
-			"@libero.it", "@gmail.com", "@hotmail.com", "@hotmail.it", "@tiscali.it" }));
+	private static final HashSet<String> EMAIL_HOME_PROVIDERS = new HashSet<String>(
+			Arrays.asList(new String[] { "@fastwebnet.it", "@virgilio.it",
+					"@tim.it", "@msn.com", "@live.com", "@ovi.com",
+					"@yahoo.com", "@live.it", "@inwind.it", "@outlook.com",
+					"@tin.it", "@aliceposta.it", "@alice.it", "@yahoo.it",
+					"@libero.it", "@gmail.com", "@hotmail.com", "@hotmail.it",
+					"@tiscali.it" }));
 
 	private static final String EMAIL_ORG_ALMAVIVA = "@almaviva.it";
 
@@ -102,9 +110,12 @@ public class Test implements Runnable {
 
 	private static final String EMAIL_ORG_OBJECTWAY = "@objectway.it";
 
-	private static final HashSet<String> EMAIL_WORK_PROVIDERS = new HashSet<String>(Arrays.asList(new String[] { "@villadelrosario.it", "@bitmedia.it",
-			"@kpmg.it", "@reply.it", "@venere.com", "@oracle.com", "@accenture.com", "@unisa.it", "@falesia.it", EMAIL_ORG_EXPEDIA, EMAIL_ORG_INMATICA,
-			EMAIL_ORG_ALMAVIVA, EMAIL_ORG_OBJECTWAY }));
+	private static final HashSet<String> EMAIL_WORK_PROVIDERS = new HashSet<String>(
+			Arrays.asList(new String[] { "@villadelrosario.it", "@bitmedia.it",
+					"@kpmg.it", "@reply.it", "@venere.com", "@oracle.com",
+					"@accenture.com", "@unisa.it", "@falesia.it",
+					EMAIL_ORG_EXPEDIA, EMAIL_ORG_INMATICA, EMAIL_ORG_ALMAVIVA,
+					EMAIL_ORG_OBJECTWAY }));
 
 	private static final String GENERIC_HOME_REL = "http://schemas.google.com/g/2005#home";
 
@@ -130,13 +141,20 @@ public class Test implements Runnable {
 
 	private static final String ORG_VENERE_NAME = "Venere Net S.r.l.";
 
-	private static final HashSet<String> PHONE_HOME_RELS = new HashSet<String>(Arrays.asList(new String[] { GENERIC_MAIN_REL, GENERIC_HOME_REL,
-			GENERIC_WORK_REL, "http://schemas.google.com/g/2005#work_fax" }));
+	private static final HashSet<String> PHONE_HOME_RELS = new HashSet<String>(
+			Arrays.asList(new String[] { GENERIC_MAIN_REL, GENERIC_HOME_REL,
+					GENERIC_WORK_REL,
+					"http://schemas.google.com/g/2005#work_fax" }));
 
-	private static final HashSet<String> PHONE_MOBILE_RELS = new HashSet<String>(Arrays.asList(new String[] { GENERIC_MAIN_REL,
-			"http://schemas.google.com/g/2005#mobile", GENERIC_WORK_REL, "http://schemas.google.com/g/2005#home_fax", "http://schemas.google.com/g/2005#pager" }));
+	private static final HashSet<String> PHONE_MOBILE_RELS = new HashSet<String>(
+			Arrays.asList(new String[] { GENERIC_MAIN_REL,
+					"http://schemas.google.com/g/2005#mobile",
+					GENERIC_WORK_REL,
+					"http://schemas.google.com/g/2005#home_fax",
+					"http://schemas.google.com/g/2005#pager" }));
 
-	private static final String[] PHONE_PREFIXES = { "06", "0828", "089", "081", "02", "0773", "0577", "051", "059" };
+	private static final String[] PHONE_PREFIXES = { "06", "0828", "089",
+			"081", "02", "0773", "0577", "051", "059" };
 
 	static final String URL_FACEBOOK = "https://www.facebook.com/";
 
@@ -159,15 +177,19 @@ public class Test implements Runnable {
 
 	private Map<String, String> organizations = new HashMap<String, String>();
 
-	private boolean checkContent(ContactEntry contact, String name) throws IOException {
+	private Map<String, String> otherGroups = new HashMap<String, String>();
+
+	private boolean checkContent(ContactEntry contact, String name)
+			throws IOException {
 		boolean changed = false;
 		if (contact.getContent() != null) {
-			BufferedReader reader = new BufferedReader(new StringReader(contact.getTextContent().getContent().getPlainText()));
+			BufferedReader reader = new BufferedReader(new StringReader(contact
+					.getTextContent().getContent().getPlainText()));
 			String line = null;
 			while ((line = reader.readLine()) != null) {
 				String prefix = null;
-				//for (String pre : NOTE_PREFIXES) {
-				for (Field field: NoteField.class.getDeclaredFields()) {
+				// for (String pre : NOTE_PREFIXES) {
+				for (Field field : NoteField.class.getDeclaredFields()) {
 					String pre = null;
 					try {
 						pre = (String) field.get(null);
@@ -176,7 +198,7 @@ public class Test implements Runnable {
 					} catch (Exception e) {
 						throw new RuntimeException(e);
 					}
-					if (line.startsWith(pre+":")) {
+					if (line.startsWith(pre + ":")) {
 						prefix = pre;
 						break;
 					}
@@ -189,7 +211,8 @@ public class Test implements Runnable {
 		return changed;
 	}
 
-	private boolean checkEmails(ContactEntry contact, String name, boolean isMyContact) {
+	private boolean checkEmails(ContactEntry contact, String name,
+			boolean isMyContact) {
 		boolean changed = false;
 		boolean asPrimary = false;
 		List<Email> emailAddresses = contact.getEmailAddresses();
@@ -214,18 +237,21 @@ public class Test implements Runnable {
 				if (!e.getRel().equals(GENERIC_HOME_REL)) {
 					e.setRel(GENERIC_HOME_REL);
 					changed = true;
-					reportChange(contact, "email address home rel : " + name + " : " + address);
+					reportChange(contact, "email address home rel : " + name
+							+ " : " + address);
 				}
 			} else if (EMAIL_WORK_PROVIDERS.contains(provider)) {
 				if (!e.getRel().equals(GENERIC_WORK_REL)) {
 					e.setRel(GENERIC_WORK_REL);
 					changed = true;
-					reportChange(contact, "email address work rel : " + name + " : " + address);
+					reportChange(contact, "email address work rel : " + name
+							+ " : " + address);
 				}
 			}
 			if (e.getPrimary()) {
 				if (asPrimary) {
-					report(contact, new DuplicatePrimaryEmailAddress(name, address));
+					report(contact, new DuplicatePrimaryEmailAddress(name,
+							address));
 				} else {
 					asPrimary = true;
 				}
@@ -237,7 +263,9 @@ public class Test implements Runnable {
 		return changed;
 	}
 
-	private void checkEventFacebookBirthday(ContactEntry contact, FacebookBirthdayCalendar facebookCalendar, String name, Object facebookContact) {
+	private void checkEventFacebookBirthday(ContactEntry contact,
+			FacebookBirthdayCalendar facebookCalendar, String name,
+			Object facebookContact) {
 		Birthday birthday = contact.getBirthday();
 		facebookCalendar.remove(facebookContact);
 		String contactDate = birthday.getWhen();
@@ -245,37 +273,46 @@ public class Test implements Runnable {
 			report(contact, new BirthdayWithoutYear(name, contactDate));
 		}
 		contactDate = contactDate.substring(1);
-		contactDate = contactDate.substring(contactDate.indexOf("-") + 1, contactDate.length());
-		String calendarDate = BIRTHDAY_DATE_FORMAT.format(facebookCalendar.getBirthday(facebookContact));
+		contactDate = contactDate.substring(contactDate.indexOf("-") + 1,
+				contactDate.length());
+		String calendarDate = BIRTHDAY_DATE_FORMAT.format(facebookCalendar
+				.getBirthday(facebookContact));
 		if (!contactDate.equals(calendarDate)) {
-			report(contact, new BirthdayMismatch(name, contactDate, calendarDate));
+			report(contact, new BirthdayMismatch(name, contactDate,
+					calendarDate));
 		}
 	}
 
-	private boolean checkEvents(FacebookBirthdayCalendar facebookCalendar, ContactEntry contact, String name) {
+	private boolean checkEvents(FacebookBirthdayCalendar facebookCalendar,
+			ContactEntry contact, String name) {
 		boolean changed = false;
 		if (contact.hasBirthday() && facebookCalendar != null) {
 			Object facebookContact = facebookCalendar.getByName(name);
 			if (facebookContact != null) {
-				checkEventFacebookBirthday(contact, facebookCalendar, name, facebookContact);
+				checkEventFacebookBirthday(contact, facebookCalendar, name,
+						facebookContact);
 			} else {
 				for (Website website : contact.getWebsites()) {
 					if (website.getHref().startsWith(URL_FACEBOOK)) {
-						facebookContact = facebookCalendar.getById(website.getHref().substring(URL_FACEBOOK.length()));
+						facebookContact = facebookCalendar.getById(website
+								.getHref().substring(URL_FACEBOOK.length()));
 						if (facebookContact != null) {
-							checkEventFacebookBirthday(contact, facebookCalendar, name, facebookContact);
+							checkEventFacebookBirthday(contact,
+									facebookCalendar, name, facebookContact);
 						}
 					}
 				}
 			}
 		}
 		for (Event e : contact.getEvents()) {
-			logger.debug(name + " event " + e.getRel() + " " + e.getLabel() + " " + e.getWhen().getStartTime());
+			logger.debug(name + " event " + e.getRel() + " " + e.getLabel()
+					+ " " + e.getWhen().getStartTime());
 		}
 		return changed;
 	}
 
-	private boolean checkOrganization(ContactEntry contact, String name, String org) {
+	private boolean checkOrganization(ContactEntry contact, String name,
+			String org) {
 		boolean changed = false;
 		Organization organization = null;
 		if (contact.getOrganizations().size() > 1) {
@@ -292,7 +329,9 @@ public class Test implements Runnable {
 			orgTitle = organization.getOrgTitle().getValue();
 		}
 		if (!organizations.get(org).equals(orgName)) {
-			report(contact, new OrganizationMismatch(name, organizations.get(org), orgName, orgTitle));
+			report(contact,
+					new OrganizationMismatch(name, organizations.get(org),
+							orgName, orgTitle));
 		} else {
 			if (organizationEmails.get(org) != null) {
 				boolean found = false;
@@ -305,14 +344,16 @@ public class Test implements Runnable {
 					}
 				}
 				if (!found) {
-					report(contact, new NoOrganizationEmailAddress(name, orgName));
+					report(contact, new NoOrganizationEmailAddress(name,
+							orgName));
 				}
 			}
 		}
 		return changed;
 	}
 
-	private boolean checkPhoneNumbers(ContactEntry contact, String name, boolean isMyContact) {
+	private boolean checkPhoneNumbers(ContactEntry contact, String name,
+			boolean isMyContact) {
 		boolean changed = false;
 		int mobileCounter = 0;
 		boolean asPrimary = false;
@@ -321,20 +362,27 @@ public class Test implements Runnable {
 		for (PhoneNumber p : phoneNumbers) {
 			String phoneNumber = p.getPhoneNumber();
 			if (phoneNumber.startsWith("+") || phoneNumber.startsWith("00")) {
-				if (phoneNumber.startsWith("+39") || phoneNumber.startsWith("0039")) {
-					report(contact, new ItalyPrefixPhoneNumber(name, phoneNumber));
+				if (phoneNumber.startsWith("+39")
+						|| phoneNumber.startsWith("0039")) {
+					report(contact, new ItalyPrefixPhoneNumber(name,
+							phoneNumber));
 				} else {
-					logger.debug("international phone number : " + name + " : " + phoneNumber);
+					logger.debug("international phone number : " + name + " : "
+							+ phoneNumber);
 				}
 				if (p.getRel() == null) {
-					report(contact, new InvalidPhoneNumberRel(name, phoneNumber, false, p.getRel(), p.getLabel()));
+					report(contact, new InvalidPhoneNumberRel(name,
+							phoneNumber, false, p.getRel(), p.getLabel()));
 				}
 			} else if (phoneNumber.startsWith("3")) {
-				if (!Pattern.matches("3[0-9][0-9] [0-9][0-9][0-9] [0-9][0-9][0-9][0-9]", phoneNumber)) {
+				if (!Pattern.matches(
+						"3[0-9][0-9] [0-9][0-9][0-9] [0-9][0-9][0-9][0-9]",
+						phoneNumber)) {
 					phoneNumber = phoneNumber.replace((char) 8236, ' ');
 					phoneNumber = phoneNumber.replace(" ", "");
 					if (phoneNumber.length() != 10) {
-						report(contact, new InvalidPhoneNumber(name, phoneNumber));
+						report(contact, new InvalidPhoneNumber(name,
+								phoneNumber));
 					} else {
 						StringBuilder builder = new StringBuilder(phoneNumber);
 						builder.insert(3, " ");
@@ -342,11 +390,14 @@ public class Test implements Runnable {
 						phoneNumber = builder.toString();
 						p.setPhoneNumber(phoneNumber);
 						changed = true;
-						reportChange(contact, "phone number : " + name + " : " + phoneNumber);
+						reportChange(contact, "phone number : " + name + " : "
+								+ phoneNumber);
 					}
 				}
-				if (p.getRel() == null || !PHONE_MOBILE_RELS.contains(p.getRel())) {
-					report(contact, new InvalidPhoneNumberRel(name, phoneNumber, true, p.getRel(), p.getLabel()));
+				if (p.getRel() == null
+						|| !PHONE_MOBILE_RELS.contains(p.getRel())) {
+					report(contact, new InvalidPhoneNumberRel(name,
+							phoneNumber, true, p.getRel(), p.getLabel()));
 				}
 				mobileCounter++;
 				lastMobileNum = p;
@@ -359,21 +410,25 @@ public class Test implements Runnable {
 					}
 				}
 				if (prefix == null) {
-					report(contact, new UnknowPhoneNumberLandlinePrefix(name, phoneNumber));
+					report(contact, new UnknowPhoneNumberLandlinePrefix(name,
+							phoneNumber));
 				} else {
 					phoneNumber = phoneNumber.substring(prefix.length());
 					phoneNumber = phoneNumber.replace((char) 8236, ' ');
 					phoneNumber = phoneNumber.replace(" ", "");
 					if (!Pattern.matches("[0-9]*", phoneNumber)) {
-						report(contact, new InvalidPhoneNumber(name, phoneNumber));
+						report(contact, new InvalidPhoneNumber(name,
+								phoneNumber));
 					} else {
 						if (phoneNumber.length() > 7) {
-							StringBuilder builder = new StringBuilder(phoneNumber);
+							StringBuilder builder = new StringBuilder(
+									phoneNumber);
 							builder.insert(4, " ");
 							builder.insert(0, prefix + " ");
 							phoneNumber = builder.toString();
 						} else if (phoneNumber.length() == 7) {
-							StringBuilder builder = new StringBuilder(phoneNumber);
+							StringBuilder builder = new StringBuilder(
+									phoneNumber);
 							builder.insert(3, " ");
 							builder.insert(0, prefix + " ");
 							phoneNumber = builder.toString();
@@ -383,30 +438,38 @@ public class Test implements Runnable {
 						if (!phoneNumber.equals(p.getPhoneNumber())) {
 							p.setPhoneNumber(phoneNumber);
 							changed = true;
-							reportChange(contact, "phone number : " + name + " : " + phoneNumber);
+							reportChange(contact, "phone number : " + name
+									+ " : " + phoneNumber);
 						}
 					}
 				}
-				if ((p.getRel() == null && !"Genitori".equals(p.getLabel())) || (p.getRel() != null && !PHONE_HOME_RELS.contains(p.getRel()))) {
-					report(contact, new InvalidPhoneNumberRel(name, phoneNumber, false, p.getRel(), p.getLabel()));
+				if ((p.getRel() == null && !"Genitori".equals(p.getLabel()))
+						|| (p.getRel() != null && !PHONE_HOME_RELS.contains(p
+								.getRel()))) {
+					report(contact, new InvalidPhoneNumberRel(name,
+							phoneNumber, false, p.getRel(), p.getLabel()));
 				}
 			} else if (phoneNumber.startsWith("800")) {
 				if (p.getRel() == null) {
-					report(contact, new InvalidPhoneNumberRel(name, phoneNumber, false, p.getRel(), p.getLabel()));
+					report(contact, new InvalidPhoneNumberRel(name,
+							phoneNumber, false, p.getRel(), p.getLabel()));
 				}
 			} else if (phoneNumber.startsWith("*123")) {
 				if (p.getRel() == null) {
-					report(contact, new InvalidPhoneNumberRel(name, phoneNumber, false, p.getRel(), p.getLabel()));
+					report(contact, new InvalidPhoneNumberRel(name,
+							phoneNumber, false, p.getRel(), p.getLabel()));
 				}
 			} else {
 				report(contact, new UnknowPhoneNumber(name, phoneNumber));
 				if (p.getRel() == null) {
-					report(contact, new InvalidPhoneNumberRel(name, phoneNumber, false, p.getRel(), p.getLabel()));
+					report(contact, new InvalidPhoneNumberRel(name,
+							phoneNumber, false, p.getRel(), p.getLabel()));
 				}
 			}
 			if (p.getPrimary()) {
 				if (asPrimary) {
-					report(contact, new DuplicatePrimaryPhoneNumber(name, phoneNumber));
+					report(contact, new DuplicatePrimaryPhoneNumber(name,
+							phoneNumber));
 				} else {
 					asPrimary = true;
 				}
@@ -424,7 +487,8 @@ public class Test implements Runnable {
 		return changed;
 	}
 
-	private boolean checkWebsites(Map<String, String> facebookUrls, ContactEntry contact, String name) {
+	private boolean checkWebsites(Map<String, String> facebookUrls,
+			ContactEntry contact, String name) {
 		boolean changed = false;
 		if (facebookUrls != null) {
 			boolean facebookFound = false;
@@ -441,9 +505,11 @@ public class Test implements Runnable {
 					}
 				}
 				if (facebookUrl != null) {
-					contact.addWebsite(new Website(facebookUrl, null, Boolean.FALSE, Website.Rel.PROFILE));
+					contact.addWebsite(new Website(facebookUrl, null,
+							Boolean.FALSE, Website.Rel.PROFILE));
 					facebookUrls.remove(facebookUrl);
-					reportChange(contact, "added facebook site : " + name + " : " + facebookUrl);
+					reportChange(contact, "added facebook site : " + name
+							+ " : " + facebookUrl);
 					changed = true;
 				}
 			}
@@ -451,14 +517,17 @@ public class Test implements Runnable {
 		return changed;
 	}
 
-	void executeVCards(Map<String, byte[]> photoMap) throws FileNotFoundException, IOException, ParserException, ValidationException {
+	void executeVCards(Map<String, byte[]> photoMap)
+			throws FileNotFoundException, IOException, ParserException,
+			ValidationException {
 		if (!Boolean.parseBoolean(System.getProperty("vcards.process"))) {
 			return;
 		}
 		String filename = System.getProperty("vcards.input");
 		StringWriter buffer = new StringWriter();
 		PrintWriter writer = new PrintWriter(buffer);
-		BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(filename), Charset.forName("UTF-8")));
+		BufferedReader reader = new BufferedReader(new InputStreamReader(
+				new FileInputStream(filename), Charset.forName("UTF-8")));
 		String line = null;
 		while ((line = reader.readLine()) != null) {
 			line = line.replace("\\:", ":");
@@ -467,12 +536,14 @@ public class Test implements Runnable {
 		}
 		reader.close();
 		writer.close();
-		VCardBuilder builder = new VCardBuilder(new StringReader(buffer.toString()));
+		VCardBuilder builder = new VCardBuilder(new StringReader(
+				buffer.toString()));
 		buffer = null;
-		List<VCard> vCards =  builder.buildAll();
+		List<VCard> vCards = builder.buildAll();
 		File file = new File(System.getProperty("vcards.output"));
 		file.mkdir();
-		final FileOutputStream output = new FileOutputStream(new File(file, "all.vcf"));
+		final FileOutputStream output = new FileOutputStream(new File(file,
+				"all.vcf"));
 		VCardOutputter outputter = new VCardOutputter();
 		for (VCard vCard : vCards) {
 			String name = vCard.getProperty(Id.FN).getValue();
@@ -516,7 +587,9 @@ public class Test implements Runnable {
 					output.write(b);
 				}
 			});
-			outputter.output(vCard, new FileWriter(new File(file, name.replace("?", "") + ".vcf")));
+			outputter.output(vCard,
+					new FileWriter(new File(file, name.replace("?", "")
+							+ ".vcf")));
 		}
 		output.close();
 	}
@@ -532,7 +605,8 @@ public class Test implements Runnable {
 	}
 
 	private void report(ContactEntry contact, Warning warning) {
-		if (!"ignore".equalsIgnoreCase(System.getProperty(warning.getClass().getName()))) {
+		if (!"ignore".equalsIgnoreCase(System.getProperty(warning.getClass()
+				.getName()))) {
 			// printXml(contact);
 			System.out.println("WARN: " + warning.getMessage());
 		}
@@ -548,15 +622,18 @@ public class Test implements Runnable {
 			Map<String, byte[]> photoMap = new HashMap<String, byte[]>();
 			Map<String, String> facebookUrls = null;
 			try {
-				facebookUrls = new Facebook().readByUrl(new BufferedReader(new FileReader("fbids.txt")));
+				facebookUrls = new Facebook().readByUrl(new BufferedReader(
+						new FileReader("fbids.txt")));
 			} catch (Exception ex) {
-				System.err.println("Facebook URLS disabled: " + ex.getClass().getName() + ": " + ex.getMessage());
+				System.err.println("Facebook URLS disabled: "
+						+ ex.getClass().getName() + ": " + ex.getMessage());
 			}
 			FacebookBirthdayCalendar facebookCalendar = null;
 			try {
 				facebookCalendar = new FacebookBirthdayCalendar();
 			} catch (Exception ex) {
-				System.err.println("Facebook Birthday Calendar disabled: " + ex.getClass().getName() + ": " + ex.getMessage());
+				System.err.println("Facebook Birthday Calendar disabled: "
+						+ ex.getClass().getName() + ": " + ex.getMessage());
 			}
 			String googleUsername = System.getProperty("google.username");
 			if (googleUsername == null) {
@@ -568,12 +645,15 @@ public class Test implements Runnable {
 				System.out.print("Google password > ");
 				googlePassword = new String(System.console().readPassword());
 			}
-			ContactsService service = new ContactsService("Google-contactsExampleApp-3");
+			ContactsService service = new ContactsService(
+					"Google-contactsExampleApp-3");
 			service.setUserCredentials(googleUsername, googlePassword);
 			Query query = new Query(new URL(URL_GOOGLE_CONTACT_GROUPS_QUERY));
 			query.setMaxResults(1000);
-			List<ContactGroupEntry> contactGroups = service.query(query, ContactGroupFeed.class).getEntries();
+			List<ContactGroupEntry> contactGroups = service.query(query,
+					ContactGroupFeed.class).getEntries();
 			String myContactsGroupId = null;
+			String myOtherContactsGroupId = null;
 			organizations.put(ORG_INMATICA, ORG_INMATICA_NAME);
 			organizations.put(ORG_ALMAVIVA, ORG_ALMAVIVA_NAME);
 			organizations.put(ORG_OBJECTWAY, ORG_OBJECTWAY_NAME);
@@ -584,35 +664,62 @@ public class Test implements Runnable {
 			organizationEmails.put(ORG_VENERE, EMAIL_ORG_EXPEDIA);
 			HashMap<String, String> organizationMap = new HashMap<String, String>();
 			for (ContactGroupEntry contactGroup : contactGroups) {
-				if (contactGroup.getTitle().getPlainText().equals(GROUP_MY_CONTACTS)) {
+				final String groupName = contactGroup.getTitle().getPlainText();
+				if (groupName.equals(GROUP_MY_CONTACTS)) {
 					myContactsGroupId = contactGroup.getId();
 				}
+				if (groupName.equals("Other/Contacts")) {
+					myOtherContactsGroupId = contactGroup.getId();
+				}
+				if (groupName.startsWith("Other")) {
+					otherGroups.put(groupName, contactGroup.getId());
+				}
 				for (String orgName : organizations.keySet()) {
-					if (contactGroup.getTitle().getPlainText().equals(orgName)) {
+					if (groupName.equals(orgName)) {
 						organizationMap.put(orgName, contactGroup.getId());
 					}
 				}
 			}
 			query = new Query(new URL(URL_GOOGLE_CONTACTS_QUERY));
 			query.setMaxResults(1000);
-			List<ContactEntry> contacts = service.query(query, ContactFeed.class).getEntries();
+			List<ContactEntry> contacts = service.query(query,
+					ContactFeed.class).getEntries();
 			for (ContactEntry contact : contacts) {
+				String name = contact.hasName() ? contact.getName()
+						.getFullName().getValue() : "";
 				boolean changed = false;
 				boolean isMyContact = false;
+				String otherGroupId = null;
+				boolean isOtherContacts = false;
 				Set<String> contactOrganizations = new HashSet<String>();
-				List<GroupMembershipInfo> groupMembershipInfos = contact.getGroupMembershipInfos();
+				List<GroupMembershipInfo> groupMembershipInfos = contact
+						.getGroupMembershipInfos();
 				for (GroupMembershipInfo groupMembershipInfo : groupMembershipInfos) {
-					if (groupMembershipInfo.getHref().equals(myContactsGroupId)) {
+					final String groupMembershipId = groupMembershipInfo
+							.getHref();
+					if (groupMembershipId.equals(myContactsGroupId)) {
 						isMyContact = true;
 					}
+					if (groupMembershipId.equals(myOtherContactsGroupId)) {
+						isOtherContacts = true;
+					}
+					if (otherGroups.values().contains(groupMembershipId)) {
+						otherGroupId = groupMembershipId;
+					}
 					for (Entry<String, String> org : organizationMap.entrySet()) {
-						if (groupMembershipInfo.getHref().equals(org.getValue())) {
+						if (groupMembershipId.equals(org.getValue())) {
 							contactOrganizations.add(org.getKey());
 						}
 					}
 				}
-				String name = contact.hasName() ? contact.getName().getFullName().getValue() : null;
-				if (name == null) {
+				if (isMyContact && otherGroupId != null) {
+					for (Entry<String, String> e : otherGroups.entrySet()) {
+						if (e.getValue().equals(otherGroupId)) {
+							report(contact, new OtherGroup(name, e.getKey()));
+						}
+					}
+				}
+				if (name.length() == 0) {
 					if (isMyContact) {
 						report(contact, new NullName());
 						printXml(contact);
@@ -626,7 +733,8 @@ public class Test implements Runnable {
 					}
 					Link photo = null;
 					for (Link l : contact.getLinks()) {
-						if (ContactLink.Rel.CONTACT_PHOTO.equals(l.getRel()) && l.getEtag() != null) {
+						if (ContactLink.Rel.CONTACT_PHOTO.equals(l.getRel())
+								&& l.getEtag() != null) {
 							photo = l;
 						}
 					}
@@ -635,43 +743,59 @@ public class Test implements Runnable {
 					} else {
 						if (name != null) {
 							Thread.sleep(10);
-							GDataRequest photoQuery = service.createLinkQueryRequest(photo);
+							GDataRequest photoQuery = service
+									.createLinkQueryRequest(photo);
 							photoQuery.execute();
-							byte[] binary = IOUtils.toByteArray(photoQuery.getResponseStream());
+							byte[] binary = IOUtils.toByteArray(photoQuery
+									.getResponseStream());
 							photoMap.put(name, binary);
 						}
 					}
 				}
+				if (isOtherContacts) {
+					List<Relation> relations = contact.getRelations();
+					if (relations.isEmpty()) {
+						report(contact, new NoRelation(name));
+					}
+				}
 				changed |= checkPhoneNumbers(contact, name, isMyContact);
 				changed |= checkEmails(contact, name, isMyContact);
-				if (contact.getPhoneNumbers().isEmpty() && contact.getEmailAddresses().isEmpty() && contact.getImAddresses().isEmpty()) {
+				if (contact.getPhoneNumbers().isEmpty()
+						&& contact.getEmailAddresses().isEmpty()
+						&& contact.getImAddresses().isEmpty()) {
 					report(contact, new Uncontactable(name));
 				}
 				changed |= checkWebsites(facebookUrls, contact, name);
 				changed |= checkEvents(facebookCalendar, contact, name);
 				for (String contactOrganization : contactOrganizations) {
-					changed |= checkOrganization(contact, name, contactOrganization);
+					changed |= checkOrganization(contact, name,
+							contactOrganization);
 				}
 				changed |= checkContent(contact, name);
 				if (changed) {
-					service.update(new URL(contact.getEditLink().getHref()), contact);
+					service.update(new URL(contact.getEditLink().getHref()),
+							contact);
 				}
 			}
 			executeVCards(photoMap);
 			if (facebookUrls != null) {
 				for (Entry<String, String> e : facebookUrls.entrySet()) {
-					report(null, new FacebookFriendNotFound(e.getValue(), e.getKey()));
+					report(null,
+							new FacebookFriendNotFound(e.getValue(), e.getKey()));
 				}
 			}
 			if (facebookCalendar != null) {
 				for (Object obj : facebookCalendar) {
-					report(null, new FacebookFriendBirthdayNotFound(facebookCalendar.getName(obj), URL_FACEBOOK + facebookCalendar.getId(obj)));
+					report(null, new FacebookFriendBirthdayNotFound(
+							facebookCalendar.getName(obj), URL_FACEBOOK
+									+ facebookCalendar.getId(obj)));
 				}
 			}
 		} catch (Exception e) {
 			logger.error(e.getMessage(), e);
 		} finally {
-			System.out.println("Completed in " + ((System.currentTimeMillis() - t) / 1000) + " sec");
+			System.out.println("Completed in "
+					+ ((System.currentTimeMillis() - t) / 1000) + " sec");
 		}
 	}
 
