@@ -134,7 +134,7 @@ public class Test implements Runnable {
 			GENERIC_WORK_REL, "http://schemas.google.com/g/2005#work_fax" }));
 
 	private static final HashSet<String> PHONE_MOBILE_RELS = new HashSet<String>(Arrays.asList(new String[] { GENERIC_MAIN_REL,
-			"http://schemas.google.com/g/2005#mobile", GENERIC_WORK_REL, "http://schemas.google.com/g/2005#pager" }));
+			"http://schemas.google.com/g/2005#mobile", GENERIC_WORK_REL, "http://schemas.google.com/g/2005#home_fax", "http://schemas.google.com/g/2005#pager" }));
 
 	private static final String[] PHONE_PREFIXES = { "06", "0828", "089", "081", "02", "0773", "0577", "051", "059" };
 
