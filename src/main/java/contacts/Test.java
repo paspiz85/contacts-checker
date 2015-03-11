@@ -163,10 +163,12 @@ public class Test implements Runnable {
 	private static final String URL_GOOGLE_CONTACTS_QUERY = "https://www.google.com/m8/feeds/contacts/default/full";
 
 	public static void main(String[] args) throws Exception {
-		Properties props = new Properties();
-		props.load(new FileReader("checks_report.properties"));
-		for (String key : props.stringPropertyNames()) {
-			System.setProperty(key, props.getProperty(key));
+		try (FileReader reader = new FileReader("checks_report.properties")) {
+			Properties props = new Properties();
+			props.load(reader);
+			for (String key : props.stringPropertyNames()) {
+				System.setProperty(key, props.getProperty(key));
+			}
 		}
 		new Test().run();
 	}
@@ -178,6 +180,8 @@ public class Test implements Runnable {
 	private Map<String, String> organizations = new HashMap<String, String>();
 
 	private Map<String, String> otherGroups = new HashMap<String, String>();
+
+	private Set<String> suppressions = new HashSet<String>();
 
 	private boolean checkContent(ContactEntry contact, String name)
 			throws IOException {
@@ -605,8 +609,9 @@ public class Test implements Runnable {
 	}
 
 	private void report(ContactEntry contact, Warning warning) {
-		if (!"ignore".equalsIgnoreCase(System.getProperty(warning.getClass()
-				.getName()))) {
+		String className = warning.getClass().getName();
+		if (!("ignore".equalsIgnoreCase(System.getProperty(className))
+				|| suppressions.contains(warning.getMessage()))) {
 			// printXml(contact);
 			System.out.println("WARN: " + warning.getMessage());
 		}
@@ -619,6 +624,16 @@ public class Test implements Runnable {
 	public void run() {
 		long t = System.currentTimeMillis();
 		try {
+			File suppFile = new File("checks_suppressions.txt");
+			if (suppFile.exists()) {
+				try (BufferedReader reader = new BufferedReader(new FileReader(
+						suppFile))) {
+					String line = null;
+					while ((line = reader.readLine()) != null) {
+						suppressions.add(line);
+					}
+				}
+			}
 			Map<String, byte[]> photoMap = new HashMap<String, byte[]>();
 			Map<String, String> facebookUrls = null;
 			try {
@@ -671,7 +686,7 @@ public class Test implements Runnable {
 				if (groupName.equals("Other/Contacts")) {
 					myOtherContactsGroupId = contactGroup.getId();
 				}
-				if (groupName.startsWith("Other")) {
+				if (groupName.startsWith("Other/")) {
 					otherGroups.put(groupName, contactGroup.getId());
 				}
 				for (String orgName : organizations.keySet()) {
