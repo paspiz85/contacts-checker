@@ -9,7 +9,7 @@ public interface NoteField {
 	public static final String NOTE = "Note";
 	public static final String CONTATTO = "Contatto";
 	public static final String ANNO_NASCITA = "Anno nascita";
-	public static final String ETA = "Et�";
+	public static final String ETA = "Età";
 	public static final String ALTEZZA = "Altezza";
 	public static final String PESO = "Peso";
 	public static final String FUMA = "Fuma";

@@ -9,27 +9,16 @@ import it.paspiz85.contacts.logic.UncontactablePlugin;
 import it.paspiz85.contacts.warning.BirthdayMismatch;
 import it.paspiz85.contacts.warning.BirthdayWithoutYear;
 import it.paspiz85.contacts.warning.DuplicateOrganization;
-import it.paspiz85.contacts.warning.DuplicatePrimaryEmailAddress;
-import it.paspiz85.contacts.warning.DuplicatePrimaryPhoneNumber;
 import it.paspiz85.contacts.warning.FacebookFriendBirthdayNotFound;
 import it.paspiz85.contacts.warning.FacebookFriendNotFound;
-import it.paspiz85.contacts.warning.InvalidPhoneNumber;
-import it.paspiz85.contacts.warning.InvalidPhoneNumberRel;
-import it.paspiz85.contacts.warning.ItalyPrefixPhoneNumber;
-import it.paspiz85.contacts.warning.NoEmailAddressRel;
 import it.paspiz85.contacts.warning.NoGroup;
 import it.paspiz85.contacts.warning.NoOrganizationEmailAddress;
 import it.paspiz85.contacts.warning.NoPhoto;
-import it.paspiz85.contacts.warning.NoPrimaryEmailAddress;
-import it.paspiz85.contacts.warning.NoPrimaryPhoneNumber;
 import it.paspiz85.contacts.warning.NoRelation;
 import it.paspiz85.contacts.warning.NullName;
 import it.paspiz85.contacts.warning.OrganizationMismatch;
 import it.paspiz85.contacts.warning.OtherGroup;
-import it.paspiz85.contacts.warning.Uncontactable;
 import it.paspiz85.contacts.warning.UnknowNote;
-import it.paspiz85.contacts.warning.UnknowPhoneNumber;
-import it.paspiz85.contacts.warning.UnknowPhoneNumberLandlinePrefix;
 import it.paspiz85.contacts.warning.Warning;
 
 import java.io.BufferedReader;
@@ -48,8 +37,6 @@ import java.io.StringWriter;
 import java.lang.reflect.Field;
 import java.net.URL;
 import java.nio.charset.Charset;
-import java.text.SimpleDateFormat;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -58,7 +45,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 import net.fortuna.ical4j.data.ParserException;
 import net.fortuna.ical4j.model.ValidationException;
@@ -94,7 +80,6 @@ import com.google.gdata.data.contacts.Relation;
 import com.google.gdata.data.contacts.Website;
 import com.google.gdata.data.extensions.Email;
 import com.google.gdata.data.extensions.Organization;
-import com.google.gdata.data.extensions.PhoneNumber;
 import com.google.gdata.util.common.xml.XmlWriter;
 
 public class Test implements Constants, Runnable {
@@ -360,7 +345,9 @@ public class Test implements Constants, Runnable {
                         + ex.getMessage());
             }
             ContactsService service = new ContactsService("Google-contactsExampleApp-3");
-            service.setOAuth2Credentials(getGoogleCredentials());
+            Credential googleCredentials = getGoogleCredentials();
+            googleCredentials.refreshToken();
+			service.setOAuth2Credentials(googleCredentials);
             Query query = new Query(new URL(URL_GOOGLE_CONTACT_GROUPS_QUERY));
             query.setMaxResults(1000);
             List<ContactGroupEntry> contactGroups = service.query(query, ContactGroupFeed.class).getEntries();
@@ -506,7 +493,6 @@ public class Test implements Constants, Runnable {
             try {
                 return in.readLine();
             } catch (Exception e) {
-                // TODO Auto-generated catch block
                 e.printStackTrace();
                 return null;
             }
